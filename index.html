@@ -266,6 +266,12 @@
   }
   .btn-save:hover { background: var(--accent-dark); }
   .save-msg { font-size: 11.5px; color: #155724; display: none; }
+  .btn-delete {
+    padding: 8px 16px; font-size: 12.5px; font-weight: 600; font-family: var(--font);
+    background: #fff0f0; color: #C0392B; border: 1px solid #f5c6c6;
+    border-radius: var(--radius-sm); cursor: pointer; align-self: flex-start;
+  }
+  .btn-delete:hover { background: #fce4e4; }
 
   .password-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
   .password-section h3 { font-size: 13px; font-weight: 600; margin-bottom: 12px; }
@@ -443,7 +449,7 @@
 
     <div class="policy-card">
       <div class="policy-card-header">
-        <h3>Política 3</h3>
+        <h3>Política 5</h3>
         <span class="policy-status empty" id="status-1">Vazia</span>
       </div>
       <div class="policy-card-body">
@@ -468,16 +474,18 @@
         <div class="pdf-or">— ou cole o texto manualmente —</div>
         <label>Conteúdo da política</label>
         <textarea id="content-1" placeholder="Cole aqui o texto completo…"></textarea>
-        <div style="display:flex;align-items:center;gap:12px">
-          <button class="btn-save" data-policy="1">Salvar política 3</button>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <button class="btn-save" data-policy="1">Salvar política 5</button>
+          <button class="btn-delete" data-policy="1">🗑 Apagar política 5</button>
           <span class="save-msg" id="saved-1">✓ Salvo</span>
+          <span class="save-msg" id="deleted-1" style="color:#C0392B">✓ Apagada</span>
         </div>
       </div>
     </div>
 
     <div class="policy-card">
       <div class="policy-card-header">
-        <h3>Política 4</h3>
+        <h3>Política 6</h3>
         <span class="policy-status empty" id="status-2">Vazia</span>
       </div>
       <div class="policy-card-body">
@@ -502,9 +510,11 @@
         <div class="pdf-or">— ou cole o texto manualmente —</div>
         <label>Conteúdo da política</label>
         <textarea id="content-2" placeholder="Cole aqui o texto completo…"></textarea>
-        <div style="display:flex;align-items:center;gap:12px">
-          <button class="btn-save" data-policy="2">Salvar política 4</button>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <button class="btn-save" data-policy="2">Salvar política 6</button>
+          <button class="btn-delete" data-policy="2">🗑 Apagar política 6</button>
           <span class="save-msg" id="saved-2">✓ Salvo</span>
+          <span class="save-msg" id="deleted-2" style="color:#C0392B">✓ Apagada</span>
         </div>
       </div>
     </div>
@@ -883,7 +893,9 @@ DENUNCIE: qualquer situação ou comportamento que te incomode ou ofenda, de for
   var DEFAULT_ADMIN_HASH = '5fed8fa8c4a6813740e5cf8bc55c80e19028a44975f28acad227403d248e564c';
   var DEFAULT_USER_HASH  = '4bedf7799b20a6d3042789ffc2e5dc4c78f52a406c188cd0d8ab18cbc973b498';
 
-  var KEY = 'lia_chatbot_v2';
+  var KEY = 'lia_chatbot_v3';
+  // Limpa dados da versão anterior que causavam duplicatas
+  try { localStorage.removeItem('lia_chatbot_v2'); } catch(e) {}
   var history = [];
   var isAdmin = false;
   var activePolicy = null;
@@ -1026,6 +1038,18 @@ DENUNCIE: qualquer situação ou comportamento que te incomode ou ofenda, de for
       setState(patch);
       setStatus(i, !!(name && content));
       flash('saved-' + i);
+    });
+  });
+
+  document.querySelectorAll('.btn-delete[data-policy]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var i = btn.getAttribute('data-policy');
+      document.getElementById('name-' + i).value = '';
+      document.getElementById('content-' + i).value = '';
+      var patch = {}; patch['policy' + i] = { name: '', content: '' };
+      setState(patch);
+      setStatus(i, false);
+      flash('deleted-' + i);
     });
   });
 
