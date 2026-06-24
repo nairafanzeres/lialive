@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ℓIA · ℓiⱴε Intelligence Assistant</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #F7F6F3;
+    --surface: #FFFFFF;
+    --surface-alt: #F0EEE9;
+    --border: #E2DED6;
+    --text-primary: #1A1916;
+    --text-secondary: #6B6860;
+    --text-muted: #A09D97;
+    --accent: #F4FF53;
+    --accent-dark: #C4CE00;
+    --accent-light: #FAFFD6;
+    --accent-border: #E4EF00;
+    --danger: #C0392B;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --font: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  html, body {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text-primary);
+  }
+
+  .screen {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    width: 100%; height: 100%;
+    background: var(--bg);
+    display: none;
+  }
+  .screen.active { display: flex; }
+
+  /* ── LOGIN ── */
+  #login-screen {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 2rem;
+  }
+
+  .login-logo {
+    width: 48px; height: 48px;
+    background: var(--accent);
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .login-logo svg { width: 24px; height: 24px; fill: none; stroke: #1A1916; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  .login-card {
+    width: 100%; max-width: 360px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.75rem;
+    display: flex; flex-direction: column; gap: 1rem;
+  }
+  .login-card h1 { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+  .login-card p  { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 11px; font-weight: 500; color: var(--text-secondary); letter-spacing: 0.06em; text-transform: uppercase; }
+  .field input {
+    width: 100%; padding: 10px 12px; font-size: 14px; font-family: var(--font);
+    background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text-primary); outline: none;
+  }
+  .field input:focus { border-color: var(--accent-dark); }
+
+  .btn-primary {
+    width: 100%; padding: 11px; font-size: 14px; font-weight: 600; font-family: var(--font);
+    background: var(--accent); color: #1A1916; border: none;
+    border-radius: var(--radius-sm); cursor: pointer;
+  }
+  .btn-primary:hover { background: var(--accent-dark); }
+
+  .login-error { font-size: 12px; color: var(--danger); text-align: center; display: none; }
+
+  /* ── CHAT ── */
+  #chat-screen { flex-direction: column; }
+
+  .chat-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 20px; background: var(--surface);
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .chat-header-icon {
+    width: 34px; height: 34px; background: var(--accent);
+    border-radius: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .chat-header-icon svg { width: 17px; height: 17px; fill: none; stroke: #1A1916; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .chat-header-info { flex: 1; }
+  .chat-header-info h2 { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+  .chat-header-info span { font-size: 11px; color: var(--text-secondary); }
+  .header-actions { display: flex; gap: 8px; }
+
+  .btn-icon {
+    padding: 6px 10px; font-size: 11px; font-weight: 500; font-family: var(--font);
+    background: transparent; color: var(--text-secondary);
+    border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
+  }
+  .btn-icon:hover { background: var(--surface-alt); color: var(--text-primary); }
+
+  #active-policy-bar {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--accent);
+    font-size: 12px;
+    font-weight: 500;
+    color: #1A1916;
+    flex-shrink: 0;
+  }
+  #active-policy-bar.visible { display: flex; }
+  #active-policy-bar button {
+    margin-left: auto;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    color: #1A1916;
+    padding: 0;
+    opacity: 0.7;
+  }
+  #active-policy-bar button:hover { opacity: 1; }
+
+  #messages {
+    flex: 1; overflow-y: auto; padding: 16px 16px 8px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+
+  .msg { display: flex; gap: 8px; max-width: 88%; }
+  .msg.bot  { align-self: flex-start; }
+  .msg.user { align-self: flex-end; flex-direction: row-reverse; }
+
+  .msg-avatar {
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; margin-top: 2px;
+  }
+  .msg.bot  .msg-avatar { background: transparent; color: #7a7a00; padding: 0; overflow: hidden; }
+  .msg.user .msg-avatar { background: var(--accent-dark); color: #1A1916; }
+
+  .msg-bubble {
+    padding: 10px 13px; border-radius: 12px;
+    font-size: 13.5px; line-height: 1.55;
+  }
+  .msg.bot  .msg-bubble { background: var(--surface); border: 1px solid var(--border); border-bottom-left-radius: 4px; color: var(--text-primary); }
+  .msg.user .msg-bubble { background: var(--accent); color: #1A1916; border-bottom-right-radius: 4px; }
+  .msg-bubble p { margin: 0 0 6px; }
+  .msg-bubble p:last-child { margin-bottom: 0; }
+  .msg-bubble ul { padding-left: 16px; margin: 4px 0; }
+  .msg-bubble li { margin-bottom: 3px; }
+  .msg-bubble strong { font-weight: 600; }
+
+  .typing-dots { display: flex; align-items: center; gap: 4px; padding: 12px 14px; }
+  .typing-dots span {
+    width: 6px; height: 6px; background: var(--text-muted);
+    border-radius: 50%; animation: bounce 1.2s infinite;
+  }
+  .typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-5px)} }
+
+  #suggestions { padding: 0 16px 8px; display: flex; flex-wrap: wrap; gap: 6px; flex-shrink: 0; }
+  .suggestion-chip {
+    padding: 6px 11px; font-size: 12px; font-family: var(--font);
+    background: var(--surface); color: var(--text-secondary);
+    border: 1px solid var(--border); border-radius: 20px; cursor: pointer;
+  }
+  .suggestion-chip:hover { background: var(--accent-light); border-color: var(--accent-border); color: #7a7a00; }
+
+  .chat-input-area {
+    padding: 10px 16px 14px; background: var(--surface);
+    border-top: 1px solid var(--border); flex-shrink: 0;
+  }
+  .chat-input-wrap {
+    display: flex; gap: 8px; align-items: flex-end;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 8px 10px 8px 14px;
+  }
+  .chat-input-wrap:focus-within { border-color: var(--accent-dark); }
+  #chat-input {
+    flex: 1; font-family: var(--font); font-size: 13.5px; color: var(--text-primary);
+    background: transparent; border: none; outline: none;
+    resize: none; min-height: 20px; max-height: 120px; line-height: 1.5;
+  }
+  #chat-input::placeholder { color: var(--text-muted); }
+  #send-btn {
+    width: 32px; height: 32px; background: var(--accent); border: none;
+    border-radius: 8px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  #send-btn:hover { background: var(--accent-dark); }
+  #send-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  #send-btn svg { width: 15px; height: 15px; fill: none; stroke: #1A1916; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .input-hint { font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 6px; }
+
+  /* ── ADMIN ── */
+  #admin-panel { flex-direction: column; overflow-y: auto; }
+
+  .admin-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 20px; background: var(--surface);
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .admin-header h2 { font-size: 15px; font-weight: 600; }
+  .admin-header .admin-version { font-size: 12px; color: var(--text-secondary); margin-left: auto; }
+
+  .back-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 12px; font-size: 12px; font-weight: 500; font-family: var(--font);
+    background: transparent; color: var(--text-secondary);
+    border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
+  }
+  .back-btn:hover { background: var(--surface-alt); color: var(--text-primary); }
+
+  .admin-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+
+  .admin-note {
+    font-size: 12px; color: var(--text-muted); background: var(--surface-alt);
+    border-radius: var(--radius-sm); padding: 10px 14px; line-height: 1.5;
+  }
+  .admin-note strong { color: var(--text-secondary); }
+
+  .policy-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .policy-card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 16px; border-bottom: 1px solid var(--border); background: var(--surface-alt);
+  }
+  .policy-card-header h3 { font-size: 13px; font-weight: 600; }
+  .policy-status { font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 500; }
+  .policy-status.empty  { background: #FFF3CD; color: #856404; }
+  .policy-status.filled { background: #D4EDDA; color: #155724; }
+
+  .policy-card-body { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .policy-card-body label { font-size: 12px; font-weight: 500; color: var(--text-secondary); }
+  .policy-card-body input,
+  .policy-card-body textarea {
+    width: 100%; padding: 8px 11px; font-size: 13px; font-family: var(--font);
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); outline: none; color: var(--text-primary);
+  }
+  .policy-card-body textarea { min-height: 140px; resize: vertical; font-size: 12.5px; line-height: 1.6; }
+  .policy-card-body input:focus,
+  .policy-card-body textarea:focus { border-color: var(--accent-dark); }
+
+  .btn-save {
+    padding: 8px 16px; font-size: 12.5px; font-weight: 600; font-family: var(--font);
+    background: var(--accent); color: #1A1916; border: none;
+    border-radius: var(--radius-sm); cursor: pointer; align-self: flex-start;
+  }
+  .btn-save:hover { background: var(--accent-dark); }
+  .save-msg { font-size: 11.5px; color: #155724; display: none; }
+
+  .password-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+  .password-section h3 { font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+  .pass-row { display: flex; gap: 8px; align-items: center; }
+  .pass-row input {
+    flex: 1; padding: 8px 11px; font-size: 13px; font-family: var(--font);
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); outline: none; color: var(--text-primary);
+  }
+  .pass-row input:focus { border-color: var(--accent-dark); }
+
+  /* ── PDF UPLOAD ── */
+  .pdf-upload-area {
+    border: 1.5px dashed var(--border);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--bg);
+    position: relative;
+  }
+  .pdf-upload-area:hover, .pdf-upload-area.drag { border-color: var(--accent-dark); background: var(--accent-light); }
+  .pdf-upload-area input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .pdf-upload-label { font-size: 12.5px; color: var(--text-secondary); pointer-events: none; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .pdf-upload-label svg { width: 24px; height: 24px; fill: none; stroke: var(--text-muted); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  .pdf-upload-label strong { font-size: 13px; color: var(--text-primary); font-weight: 600; }
+  .pdf-file-info { display: none; align-items: center; gap: 8px; padding: 8px 10px; background: var(--accent-light); border: 1px solid var(--accent-border); border-radius: var(--radius-sm); font-size: 12px; color: #7a7a00; }
+  .pdf-file-info.visible { display: flex; }
+  .pdf-file-info button { background: none; border: none; cursor: pointer; font-size: 14px; color: var(--text-muted); margin-left: auto; line-height: 1; padding: 0 2px; }
+  .pdf-parsing { display: none; font-size: 12px; color: var(--text-secondary); align-items: center; gap: 8px; }
+  .pdf-parsing.visible { display: flex; }
+  .pdf-or { text-align: center; font-size: 11px; color: var(--text-muted); letter-spacing: 0.04em; margin: 2px 0; }
+
+  /* ── POLICIES MODAL ── */
+  #policies-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  #policies-modal.open { display: flex; }
+  .modal-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    width: 100%;
+    max-width: 360px;
+    overflow: hidden;
+  }
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: var(--accent);
+    font-size: 14px;
+    font-weight: 600;
+    color: #1A1916;
+  }
+  .modal-header button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    color: #1A1916;
+    line-height: 1;
+    padding: 0 2px;
+  }
+  .modal-body { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .modal-policy-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .modal-policy-item:hover {
+    background: var(--accent-light);
+    border-color: var(--accent-border);
+  }
+  .modal-policy-item .arrow { margin-left: auto; font-size: 14px; color: var(--text-muted); }
+  .modal-policy-item .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent); flex-shrink: 0;
+    border: 1px solid var(--accent-dark);
+  }
+  .modal-empty { font-size: 13px; color: var(--text-muted); text-align: center; padding: 8px 0; }
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN ══ -->
+<div id="login-screen" class="screen active">
+  <div class="login-logo">
+    <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+  </div>
+  <div class="login-card">
+    <h1>ℓIA · ℓiⱴε Intelligence Assistant</h1>
+    <div class="field">
+      <label>Senha de acesso</label>
+      <input type="password" id="password-input" placeholder="••••••••">
+    </div>
+    <div class="login-error" id="login-error">Senha incorreta. Tente novamente.</div>
+    <button class="btn-primary" id="login-btn">Entrar</button>
+  </div>
+</div>
+
+<!-- ══ CHAT ══ -->
+<div id="chat-screen" class="screen">
+  <div class="chat-header">
+    <div class="chat-header-icon">
+      <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    </div>
+    <div class="chat-header-info">
+      <h2>ℓIA · ℓiⱴε Intelligence Assistant</h2>
+      <span>Tire suas dúvidas sobre as políticas da ℓiⱴε</span>
+    </div>
+    <div class="header-actions">
+      <button class="btn-icon" id="btn-policies">📋 Políticas disponíveis</button>
+      <button class="btn-icon" id="btn-admin" style="display:none">⚙ Gerenciar</button>
+      <button class="btn-icon" id="btn-logout">Sair</button>
+    </div>
+  </div>
+  <div id="active-policy-bar">
+    <span>📋</span>
+    <span id="active-policy-name"></span>
+    <button id="clear-active-policy">✕ Ver todas</button>
+  </div>
+  <div id="messages"></div>
+  <div id="suggestions"></div>
+  <div class="chat-input-area">
+    <div class="chat-input-wrap">
+      <textarea id="chat-input" placeholder="Pergunte algo pra ℓIA…" rows="1"></textarea>
+      <button id="send-btn" aria-label="Enviar">
+        <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+    <div class="input-hint">ℓIA responde apenas com base nas políticas da ℓiⱴε.</div>
+  </div>
+</div>
+
+<!-- ══ POLICIES MODAL ══ -->
+<div id="policies-modal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <span>Políticas disponíveis</span>
+      <button id="modal-close">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<!-- ══ ADMIN ══ -->
+<div id="admin-panel" class="screen">
+  <div class="admin-header">
+    <button class="back-btn" id="btn-back">← Voltar ao chat</button>
+    <h2>Gerenciar Políticas</h2>
+    <span class="admin-version">v1.0</span>
+  </div>
+  <div class="admin-body">
+    <div class="admin-note">
+      As políticas 1 a 4 já estão carregadas (embutidas). Use os campos abaixo para adicionar políticas extras. Alterações ficam salvas localmente neste navegador.
+    </div>
+
+    <div class="policy-card">
+      <div class="policy-card-header">
+        <h3>Política 3</h3>
+        <span class="policy-status empty" id="status-1">Vazia</span>
+      </div>
+      <div class="policy-card-body">
+        <label>Nome da política</label>
+        <input type="text" id="name-1" placeholder="Ex: Política de Viagens">
+        <label>Anexar PDF</label>
+        <div class="pdf-upload-area" id="upload-area-1">
+          <input type="file" id="pdf-input-1" accept="application/pdf">
+          <div class="pdf-upload-label">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="12" x2="12" y2="18"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+            <strong>Clique ou arraste um PDF aqui</strong>
+            <span>O texto será extraído automaticamente</span>
+          </div>
+        </div>
+        <div class="pdf-file-info" id="pdf-info-1">
+          <span>📄</span><span id="pdf-name-1"></span>
+          <button id="pdf-remove-1" title="Remover PDF">✕</button>
+        </div>
+        <div class="pdf-parsing" id="pdf-parsing-1">
+          <span>⏳</span><span>Extraindo texto do PDF…</span>
+        </div>
+        <div class="pdf-or">— ou cole o texto manualmente —</div>
+        <label>Conteúdo da política</label>
+        <textarea id="content-1" placeholder="Cole aqui o texto completo…"></textarea>
+        <div style="display:flex;align-items:center;gap:12px">
+          <button class="btn-save" data-policy="1">Salvar política 3</button>
+          <span class="save-msg" id="saved-1">✓ Salvo</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="policy-card">
+      <div class="policy-card-header">
+        <h3>Política 4</h3>
+        <span class="policy-status empty" id="status-2">Vazia</span>
+      </div>
+      <div class="policy-card-body">
+        <label>Nome da política</label>
+        <input type="text" id="name-2" placeholder="Ex: Política de Equipamentos">
+        <label>Anexar PDF</label>
+        <div class="pdf-upload-area" id="upload-area-2">
+          <input type="file" id="pdf-input-2" accept="application/pdf">
+          <div class="pdf-upload-label">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="12" x2="12" y2="18"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+            <strong>Clique ou arraste um PDF aqui</strong>
+            <span>O texto será extraído automaticamente</span>
+          </div>
+        </div>
+        <div class="pdf-file-info" id="pdf-info-2">
+          <span>📄</span><span id="pdf-name-2"></span>
+          <button id="pdf-remove-2" title="Remover PDF">✕</button>
+        </div>
+        <div class="pdf-parsing" id="pdf-parsing-2">
+          <span>⏳</span><span>Extraindo texto do PDF…</span>
+        </div>
+        <div class="pdf-or">— ou cole o texto manualmente —</div>
+        <label>Conteúdo da política</label>
+        <textarea id="content-2" placeholder="Cole aqui o texto completo…"></textarea>
+        <div style="display:flex;align-items:center;gap:12px">
+          <button class="btn-save" data-policy="2">Salvar política 4</button>
+          <span class="save-msg" id="saved-2">✓ Salvo</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="password-section">
+      <h3>Alterar senha admin</h3>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">A nova senha será armazenada como hash SHA-256 neste navegador.</p>
+      <div class="pass-row">
+        <input type="password" id="new-pass" placeholder="Nova senha admin">
+        <button class="btn-save" id="btn-change-pass">Alterar</button>
+        <span class="save-msg" id="saved-pass">✓ Alterada</span>
+      </div>
+      <h3 style="margin-top:16px">Alterar senha usuário</h3>
+      <div class="pass-row">
+        <input type="password" id="new-user-pass" placeholder="Nova senha usuário">
+        <button class="btn-save" id="btn-change-user-pass">Alterar</button>
+        <span class="save-msg" id="saved-user-pass">✓ Alterada</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  // ─────────────────────────────────────────────
+  // POLÍTICAS EMBUTIDAS (conteúdo dos PDFs)
+  // ─────────────────────────────────────────────
+  var BUILT_IN_POLICIES = [
+    {
+      id: 'builtin-3',
+      name: 'Código de Ética e Conduta',
+      content: `CÓDIGO DE ÉTICA E CONDUTA — ℓiⱴε
+
+INTRODUÇÃO
+Este Manual resume nosso Código de Ética e Conduta, com as diretrizes que representam nosso perfil moral. Estabelece o caminho a trilhar para que nosso crescimento seja sempre pautado no respeito, na transparência e na integridade das nossas relações internas e com clientes, parcerias e fornecedores.
+
+O Canal "O que você gostaria de Saber?" e o Canal de Denúncia estão disponíveis para esclarecer dúvidas e expressar preocupações com questões éticas.
+
+FILTRO ÉTICO — ANTES DE AGIR, PERGUNTE:
+- O que pretendo fazer é Legal?
+- É para o bem de toda a comunidade, portanto Ético?
+- Está de acordo com a Cultura da ℓiⱴε?
+- Está de acordo com a Cultura de organizações externas com quem estou me relacionando?
+- As consequências dessa ação refletirão bem sobre mim, sobre a ℓiⱴε e sobre a organização externa?
+Se a resposta para qualquer uma dessas perguntas for NÃO, não adote a conduta avaliada. Em caso de dúvida, procure sua liderança ou a área de Cultura e Gestão.
+
+CONDUTA PESSOAL
+- Cumpra sempre as normas, políticas, processos e procedimentos estabelecidos.
+- Cultive a cordialidade nos relacionamentos e resolva desentendimentos com cuidado, respeito e acolhimento.
+- Pratique o diálogo e não a imposição de um ponto de vista; ouça com atenção e respeite a opinião alheia.
+- Ajude os colegas a realizar um bom trabalho e oriente com paciência e interesse.
+- Jamais induza alguém ao erro ou a algo que possa causar prejuízo.
+- Cuide dos recursos, equipamentos e materiais de trabalho.
+- Adote os preceitos do consumo consciente: não desperdice.
+
+ENTRE COLABORADORES
+Espera-se cordialidade, confiança, respeito e conduta digna e honesta, independentemente de qualquer posição hierárquica, cargo ou função.
+- Seja sempre ético e íntegro.
+- Aja sempre com foco na verdade.
+- Seja um exemplo de busca pela excelência.
+- Pratique e exija o respeito.
+
+GESTÃO PARTICIPATIVA
+A nossa cultura proporciona um ambiente amigável, informal e flexível, privilegiando o diálogo e o estímulo à ampla participação, de forma que se possa efetivamente contribuir com a gestão da empresa e dos trabalhos em curso.
+
+VALORIZAÇÃO DA DIVERSIDADE
+Acreditamos que a diversidade atrai diferentes visões de mundo e por isso fortalece o respeito, amplia o diálogo, facilita o aprendizado e enriquece o trabalho. São intoleráveis quaisquer formas de discriminação relacionadas a: Etnia, Origem, Gênero, Orientação Sexual, Crença religiosa, Convicção política ou ideológica, Condição de sindicalização, Classe Social, Presença de deficiência, Estado civil ou Idade.
+
+POLÍTICA DE NÃO DISCRIMINAÇÃO (HIV/AIDS)
+A pessoa com HIV/AIDS não precisa divulgar sua sorologia para a empresa — dados de saúde são protegidos pela LGPD. Discriminar ou demitir uma pessoa que vive com HIV/AIDS é crime (Lei Federal nº 12.984/2014). Todos os planos de saúde são obrigados a cobrir o diagnóstico de HIV. Os medicamentos antirretrovirais (ARV) são fornecidos gratuitamente pelo SUS.
+
+ASSÉDIO MORAL
+É inaceitável que qualquer pessoa seja exposta a situações humilhantes e/ou constrangedoras. Qualquer conduta negativa que desestabilize as relações no ambiente de trabalho será apurada e punida com rigor.
+
+ASSÉDIO SEXUAL
+É proibida e intolerada a prática de qualquer forma de assédio sexual. Qualquer comportamento deste tipo estará sujeito às sanções das leis vigentes, inclusive demissão por justa causa.
+
+PROIBIÇÃO DO TRABALHO INFANTIL
+O trabalho infantil é intolerado. Abrange atividade desempenhada por crianças com idade inferior a 16 anos, embora seja admissível para aqueles com 14 a 16 anos na condição de aprendizes.
+
+INCENTIVO AO VOLUNTARIADO
+A ℓiⱴε favorece o envolvimento de seu time em atividades de interesse geral, estimulando ações de voluntariado e de solidariedade.
+
+RECEBIMENTO DE PRESENTES, BRINDES E OUTROS
+Presentes de clientes ou fornecedores são aceitáveis quando são atos genuínos de reconhecimento ou gratidão. Um presente jamais pode ser utilizado como pretexto para um benefício individual ou coletivo, seja financeiro ou não.
+
+SAÚDE, SEGURANÇA E QUALIDADE DE VIDA
+Valorizamos a vida, o equilíbrio entre os papéis que uma pessoa exerce, e a promoção da segurança e da saúde física e mental de nosso time.
+
+DESENVOLVIMENTO E VALORIZAÇÃO PROFISSIONAL
+Acreditamos no cuidado, no desenvolvimento e na valorização das pessoas. É responsabilidade de todos construir um ambiente de trabalho saudável, seguro, estimulante e produtivo.
+
+CONFLITO DE INTERESSES
+Devemos evitar situações em que interesses pessoais possam conflitar com os da ℓiⱴε. Há conflito de interesse quando nos deparamos com uma situação que possa nos levar a tomar decisões motivadas por outros interesses que não os melhores para o resultado do trabalho.
+
+FORNECEDORES
+Adotamos critérios justos e transparentes de seleção e contratação. Não toleramos qualquer forma de trabalho degradante (escravo, forçado, infantil) em nossa cadeia de suprimento.
+
+RELACIONAMENTO COM OS CLIENTES
+Devemos nos relacionar com clientes de forma objetiva e imparcial. Em atendimento à LGPD, todas as informações relacionadas a ℓiⱴεrs, clientes, fornecedores e projetos são confidenciais e sigilosas.
+
+CONFIDENCIALIDADE
+Todos as informações da vida funcional da ℓiⱴε são sigilo profissional, incluindo: dados pessoais ou funcionais da equipe, salários, listas internas, produtos, análises, projetos técnicos, planos comerciais e financeiros.
+
+NOSSAS RESPONSABILIDADES SOCIAIS
+Apoiamos os direitos humanos universais, incluindo igualdade de emprego, locais de trabalho seguros e liberdade de expressão. Temos consciência de nosso impacto sobre o meio ambiente.
+
+COMUNICAÇÃO — CANAIS DE DENÚNCIA
+Para comunicar uma possível infração ao Código de Ética:
+- Contato direto com a gestão imediata
+- Área de Gestão de Pessoas
+- Canal de Denúncia (garante segurança, sigilo e preservação da identidade — manifestação anônima é possível)
+E-mails: naira.fanzeres@live.tt, natalia.joaquim@ℓiⱴε.tt, heber.araujo@ℓiⱴε.tt
+
+COMITÊ DE ÉTICA
+O comitê de ética é formado por sócios e representantes designados. Junto ao Código você recebe o Termo de Adesão, que após leitura deverá ser assinado e entregue ao RH.`
+    },
+    {
+      id: 'builtin-4',
+      name: 'Política de Reuniões',
+      content: `POLÍTICA DE REUNIÕES — ℓiⱴε
+
+ANTES DE AGENDAR, PERGUNTE-SE:
+- Essa reunião é REALMENTE necessária? Será que um papo rápido no chat não resolve o assunto?
+- Se preciso marcar, analise COM CUIDADO cada pessoa que será convidada.
+- Todos da área precisam participar ou apenas 1 pessoa é suficiente?
+
+BOAS PRÁTICAS
+- Nosso tempo padrão para reuniões é de 45 minutos. Configure seu Google Calendar para isso.
+- Coloque todas as informações necessárias na descrição: pauta, comentários adicionais, materiais e link correto.
+- Respeite o intervalo de 15 minutos entre uma reunião e outra.
+- É obrigatório verificar as agendas das pessoas envolvidas antes de agendar, para evitar sobreposição de compromissos.
+
+NO MEETING SPACE
+Bloqueio na agenda que garante um tempo livre de reuniões:
+- Segundas-feiras: bloqueio das 9h30 às 14h
+- Sextas-feiras: bloqueio a partir das 16h
+Isso não significa que o expediente termine nesse horário — é um momento reservado para focar em tarefas e planejar atividades.
+
+USO DE IA PARA TRANSCRIÇÃO DE REUNIÕES
+- As reuniões não devem ser gravadas automaticamente.
+- O uso de ferramentas para transcrição precisa ser combinado antes com todos os participantes.
+- Em reuniões com clientes, a gravação só pode acontecer com a autorização deles.
+- Transparência é fundamental: todos devem estar cientes e de acordo.
+
+O JOGO DA REUNIÃO — PRECISO DE REUNIÃO?
+
+SITUAÇÃO 1: Existe uma decisão específica para ser tomada?
+- SIM → Esta decisão necessita de outra pessoa?
+  - NÃO → Reunião desnecessária! Tome a decisão e siga em frente. Informe e documente para que as pessoas envolvidas tenham conhecimento.
+
+SITUAÇÃO 2: A decisão necessita de mais de uma pessoa?
+- SIM → Tente resolver por texto antes de marcar a reunião! Sua equipe pode receber uma mensagem e responder agora ou logo mais. Crie um post deixando clara sua demanda e a ação esperada. Se necessário, determine um prazo para receber a resposta.
+
+SITUAÇÃO 3: Você já tentou resolver por texto e não rolou?
+- SIM → Partiu reunião! Deixe claro para as pessoas o que se espera desse encontro e defina um horário para início e fim. Lembre-se: uma reunião de 1 hora com 5 pessoas não custa 1 hora — custa 5 horas.`
+    },
+    {
+      id: 'builtin-1',
+      name: 'Cartilha de Assédio Moral e Sexual',
+      content: `CARTILHA ASSÉDIO MORAL E SEXUAL NO TRABALHO — ℓiⱴε
+
+APRESENTAÇÃO
+O propósito dessa cartilha é informar a todas as pessoas da ℓiⱴε ou que se relacionam conosco sobre o que é, como ocorre e de que forma devemos combater o Assédio Moral e Sexual no trabalho. Não aceitamos, em hipótese alguma, a propagação de uma cultura de assédio. Acreditamos nas pessoas, lutaremos por elas e por um ambiente de trabalho saudável pautado na dignidade e no amplo respeito.
+Aline Rossin, CEO da ℓiⱴε
+
+O QUE É ASSÉDIO MORAL?
+A prática de assédio moral no trabalho consiste na exposição prolongada e repetitiva de uma ou várias pessoas a situações humilhantes, vexatórias e constrangedoras, durante o desempenho de suas funções.
+
+Formas de assédio moral:
+- Assédio descendente: quando o superior hierárquico ataca seus subordinados com palavras e ações que afetem sua dignidade e provoquem desequilíbrio emocional.
+- Assédio ascendente: quando os subordinados assediam seus superiores. Normalmente se configura com um grupo praticando assédio contra a gestão.
+- Assédio paritário: quando um grupo assedia um dos membros da equipe, mesmo que não haja relação de subordinação entre eles.
+
+EXEMPLOS DE ASSÉDIO MORAL
+- Ameaçar alguém, sinalizando o risco da perda do emprego
+- Pressionar para que não se exerçam direitos sindicais e trabalhistas
+- Sugerir que uma pessoa que tenha problemas de saúde peça demissão
+- Sonegar informações úteis para a realização de suas tarefas ou induzi-las a erro
+- Exigir que se trabalhe além do período contratado de forma não consensual
+- Desconsiderar problemas de saúde ou recomendações médicas na distribuição de tarefas
+- Invadir e criticar a vida privada, as preferências ou as convicções pessoais
+- Dificultar ou impedir promoções e exercício de funções diferenciadas
+- Exigir constantemente e sem critério a execução de tarefas urgentes
+- Excluir as pessoas de confraternizações, almoços e atividades com os demais colegas
+- Delegar propositalmente e com frequência, tarefas inferiores ou distintas das atribuições
+- Atribuir, de forma constante, quantidade superior de tarefas comparativamente a de pares
+- Retirar autonomia funcional ou privar as pessoas de acesso aos instrumentos de trabalho
+- Isolar as pessoas no ambiente de trabalho, seja fisicamente, seja mediante recusa de comunicação
+- Contestar sistematicamente todas as decisões de outrem
+- Criticar os trabalhos realizados por outras pessoas de modo exagerado ou injusto
+- Espalhar boatos, procurando desmerecer as pessoas publicamente
+- Agredir verbalmente, dirigir gestos de desprezo, alterar o tom de voz ou ameaçar com outras formas de violência
+
+COMO DIFERENCIAR ASSÉDIO MORAL DOS ATOS DE GESTÃO?
+Os atos de gestão, desde que não discriminem ou ofendam as pessoas, não caracterizam assédio moral.
+Exemplos que NÃO representam assédio moral:
+- Delegar tarefas condizentes à sua função
+- Criticar de forma construtiva, desde que de forma privada
+- Transferir a pessoa para outro posto de trabalho ou alterar sua jornada de acordo com as necessidades da empresa
+
+COMO COMBATER O ASSÉDIO MORAL?
+- Rompa o silêncio e denuncie
+- Evite conversar a sós com a pessoa agressora
+- Anote detalhadamente todas as situações: data, horário, local, nome da pessoa agressora, nome de testemunhas e descrição dos fatos
+O canal de denúncia da ℓiⱴε é anônimo e garante que a situação será tratada com imparcialidade e profissionalismo.
+
+ASSÉDIO SEXUAL
+Assédio Sexual é crime. Art. 216-A do Código Penal Brasileiro:
+"Constranger alguém com o intuito de obter vantagem ou favorecimento sexual, prevalecendo-se o agente da sua condição de superior hierárquico ou ascendência inerentes ao exercício de emprego, cargo ou função."
+É toda ação de teor sexual, com contato físico ou não, manifestada por palavras, gestos, piadas ou outros meios; propostas ou impostas à pessoa, causando o constrangimento.
+O assédio sexual independe de gênero e orientação sexual.
+
+DOIS TIPOS DE ASSÉDIO SEXUAL
+- Assédio sexual por chantagem: exigência de ação sexual em troca de benefícios ou para evitar prejuízos na relação de trabalho. Normalmente ligado à questão hierárquica.
+- Assédio sexual por intimidação: provocações sexuais inconvenientes no ambiente de trabalho, com o intuito de prejudicar a atuação de uma pessoa ou criar situação ofensiva, de intimidação ou humilhação. Pode ser praticado individualmente ou em grupo.
+
+EXEMPLOS DE ASSÉDIO SEXUAL
+- Contato físico não desejado
+- Solicitação de favores sexuais
+- Promessas de tratamento diferenciado
+- Insistência após recusa ou negação (não é não!)
+- Gestos ou palavras de cunho sexual, escritas ou faladas
+- Chantagem para permanência ou promoção no emprego
+- Perturbação, ofensa, conversas inconvenientes sobre sexo
+- Narração de piadas ou uso de expressões de conteúdo sexual
+- Convites impertinentes, pressão para participar de encontros e saídas
+- Ameaças, implícitas ou explícitas, de represálias, como a de perder o emprego
+
+O QUE NÃO CARACTERIZA ASSÉDIO SEXUAL?
+- Elogios sem conteúdo sexual
+- Cantadas, paqueras ou flertes consentidos e correspondidos
+
+O ASSÉDIO SÓ OCORRE ENTRE PESSOAS DA MESMA EMPRESA?
+Não. O assédio sexual no trabalho pode ser praticado por pessoas terceiras, como clientes. As condições são as mesmas.
+
+O ASSÉDIO SÓ OCORRE NO AMBIENTE DE TRABALHO?
+Não, mas é necessário que a situação ocorra por conta do trabalho, ainda que fora do estabelecimento: intervalos, locais de repouso e alimentação, antes do início ou após o término, festas e happy hours, durante caronas ou transporte entre trabalho e residência.
+
+AÇÕES CONTRA O ASSÉDIO SEXUAL
+- Romper o silêncio e recorrer ao canal de denúncia da empresa
+- Ser claro em qualquer situação de flertes e paqueras não consentidos
+- Evitar permanecer a sós com a pessoa assediadora
+- Reunir provas: bilhetes, e-mails, mensagens de celular, redes sociais, presentes
+- Anotar todas as abordagens de caráter sexual sofridas com dia, hora, local, nome da pessoa agressora e testemunhas
+- Tentar livrar-se do sentimento de culpa — a irregularidade da conduta não depende do comportamento da vítima, mas da pessoa agressora`
+    },
+    {
+      id: 'builtin-2',
+      name: 'Manual de Integração CLT',
+      content: `MANUAL DE INTEGRAÇÃO ℓiⱴε — CLT
+
+INTRODUÇÃO
+Seja bem-vindo à ℓiⱴε. Este material apresenta uma visão geral da nossa cultura e políticas. A ℓiⱴε é "the culture-driven agency" — pioneira em marketing digital e de influência no Brasil desde 2005. Ganhamos Leão de Ouro em PR e trabalhamos com marcas como Nike, TikTok, Electrolux, Amazon Prime Video, Audible, Amstel, Unilever, Mondelez, Riachuelo, Wise, Stanley, entre outras.
+
+VALORES DA ℓiⱴε
+- Felicidade
+- Empatia
+- Craft
+- Criatividade
+- Colaboração
+- Transformação
+- Rituais
+
+ANYWHERE OFFICE
+Nossa Operação Anywhere Office proporciona flexibilidade na forma de trabalhar. O principal benefício é a possibilidade de trabalhar de onde quiser: sua própria casa, café ou coworking.
+
+Benefícios do Anywhere Office:
+- Tornar nossos encontros presenciais mais produtivos e prazerosos
+- Proporcionar maior espontaneidade e qualidade nas relações
+- Reduzir quantidade e tempo dedicado ao deslocamento
+- Gerar menos estresse e aumentar nível de segurança contra riscos urbanos
+- Colaborar com a qualidade de vida das pessoas
+- Conquistar independência geográfica para a ℓiⱴε e ℓiⱴεrs
+- Ampliar possibilidades de trabalhar com talentos de outras partes do mundo
+- Reduzir a dependência do espaço físico
+
+Dicas para o Anywhere Office:
+- Respeitar o momento de trabalho com foco total em suas atividades
+- Evite que sua área de trabalho esteja em local de circulação com ruídos
+- Mantenha seu ambiente de trabalho sempre limpo e organizado
+- Mantenha contato constante com os membros da sua equipe
+- Faça breaks periódicos e dedique um tempo para você
+- Evite distrações como TVs ou música muito alta
+- Estabeleça uma rotina diária de trabalho como se você tivesse que trabalhar fora
+- Tenha disciplina, faça um plano de trabalho e siga o planejado
+
+Como deixar seu Anywhere Office mais sustentável:
+- Economize energia: desligue dispositivos eletrônicos quando não estiver usando; use luz natural sempre que possível; prefira lâmpadas LED
+- Reduza consumo de água: use a água de forma consciente; utilize copos e garrafas reutilizáveis
+- Minimize deslocamentos: opte por transporte público, bicicleta ou carona compartilhada quando precisar se deslocar
+
+NO MEETING SPACES
+Bloqueio nas agendas para que os ℓiⱴεrs se foquem em seus trabalhos sem participar de reuniões.
+- Segundas: bloqueio das 09h30 às 14h
+- Sextas: bloqueio a partir das 16h
+Não significa que o expediente acaba nesse horário — é o momento para se concentrar em tarefas e planejar atividades.
+
+CARGA HORÁRIA
+Trabalhamos 40 horas semanais, com horário flexível combinado com o gestor. Normalmente emendamos os feriados e avisamos com antecedência. Fique atento ao Slack.
+
+DAY OFF DE ANIVERSÁRIO
+O dia do seu aniversário é folga. Se o aniversário cair em sábado, domingo ou feriado, você pode alinhar com o seu gestor o melhor dia para curtir esse benefício.
+
+PAGAMENTOS
+Os salários são pagos sempre no último dia útil. O pagamento pode ser realizado no banco de sua escolha.
+Os demonstrativos de pagamento CLT estão disponíveis no portal Domínio. Login com CPF. Os holerites ficam disponíveis sempre no último dia útil do mês vigente.
+Nossa agência é filiada ao Sindicato dos Publicitários. O reajuste anual de salário (CLT) tem data base em Abril.
+
+BENEFÍCIOS
+- Seguro de Vida: apólice coletiva que cobre acidentes, morte e auxílio funeral
+- Vale Transporte: oferecido para todos que optarem, com desconto no limite de 4% do salário bruto mensal em folha de pagamento
+- Alimentação: Vale Alimentação de R$ 50,00 por dia útil (desconto de 10% sobre o valor total do benefício). Pode ser usado em mercado, delivery, restaurantes ou padaria
+- Auxílio Creche: para ℓiⱴεrs com filhos de até 6 anos de idade, equivalente a 20% do piso salarial da categoria por mês
+- Ajuda de custo: exclusivamente para ℓiⱴεrs que ganham até R$4.340,74/mês, no valor de R$105,22
+- Wellhub: a ℓiⱴε subsidia os planos Starter e Basic. Para planos superiores o ℓiⱴεr paga só a diferença. É possível incluir até 3 dependentes
+
+CONVÊNIOS
+Assistência Médica: Plano Ouro Mais da Porto Seguro, gratuito para todos os ℓiⱴεrs, sem desconto em folha. Para upgrade de plano, o ℓiⱴεr custeia a diferença. Inclusão de dependentes legais é possível, com custo integralmente pelo ℓiⱴεr. Prazo de inclusão: 30 dias a partir da admissão.
+
+Convênio Odontológico (opcional, 100% custeado pelo ℓiⱴεr):
+- Plano Bronze: R$19,28/mês — coberturas básicas
+- Plano Ouro: R$114,56/mês — coberturas básicas + prótese dentária e ortodontia
+Prazo de inclusão: 30 dias a partir da admissão.
+
+FÉRIAS
+Após 12 meses de trabalho (período aquisitivo) e até 30 dias antes de vencer o 2º período aquisitivo. A data deve ser combinada com bastante antecedência com o gestor. A gestão deve preencher o Formulário de Férias para que sejam definitivamente agendadas.
+O descanso acontece em período contínuo, podendo ser fracionado em até 3 períodos, desde que nenhum seja inferior a 5 dias e pelo menos um seja de 14 dias.
+
+LICENÇA MATERNIDADE E PATERNIDADE
+- Mães: 6 meses de licença maternidade
+- Pais: 1 mês de licença paternidade
+As licenças também são válidas em caso de adoção. A ℓiⱴε analisa casos específicos, como ausência de um dos genitores/adotantes por qualquer razão durante esses períodos. Casos em que o pai necessite do período equivalente para completar 6 meses também são considerados.
+Para solicitar: enviar e-mail para natalia.joaquim@live.tt
+
+SEGURANÇA PATRIMONIAL
+Ao término do contrato de trabalho devem ser entregues ao gestor ou à área de Gestão de Pessoas: telefones celulares, notebooks e demais ferramentas de trabalho. Os recursos devem ser devolvidos em perfeito estado e condições de reutilização. Caso haja destruição e danos por mau uso, o colaborador deverá ressarcir o produto ou o valor.
+
+ATESTADOS MÉDICOS
+Atestados médicos devem ser enviados exclusivamente por e-mail, com cópia para a liderança. O RH não tem responsabilidade em avisar a liderança sobre o atestado — cabe ao próprio ℓiⱴεr garantir que sua gestão direta seja informada.
+
+ACIDENTE DE TRABALHO
+O acidentado deve comunicar seu superior imediato no prazo de 24 horas, passando o número de telefone para ser contatado pela segurança do trabalho e departamento pessoal, para emissão do CAT (Comunicado de Acidente de Trabalho). Em casos de afastamento por mais de 15 dias, o CAT deve ser encaminhado ao INSS.
+
+CANAIS DE COMUNICAÇÃO E TECNOLOGIA
+- Slack: canal #general para informações e avisos da ℓiⱴε. Grupos específicos por job.
+- E-mail: comunicação com o mundo externo (clientes, fornecedores, formalidades)
+- Google Agenda: organização de horários e locais de cada iniciativa
+- Google Hangout: ferramenta de comunicação virtual
+- Google Docs, Sheets, Slides: construção colaborativa de conteúdos
+- Google Team Drive: servidor de arquivos
+- Monday: plataforma de gestão — organiza demandas, fluxos de trabalho e acompanhamento de entregas
+- Publi Manager: ERP para processos financeiros de Produção, Mídia, Gestão e outros
+- Para dúvidas ou ajuda com tecnologia: helpdesk@live.tt
+
+CONDUTA E RESPEITO INCONDICIONAL
+Falta de respeito, abuso de poder, humilhação de pessoas, assédios moral e sexual são absolutamente intoleráveis, independente do nível hierárquico.
+Se você presenciar ou for vítima de alguma destas situações, entre em contato com a equipe de Gestão de Pessoas ou denuncie pelo Canal de Denúncia (anônimo).
+Não critique ou desqualifique produtos e serviços da ℓiⱴε perante terceiros. Repasse sua opinião ao gestor imediato ou em reuniões internas. A relação divertida e saudável se desenvolve com respeito e sem julgamentos.
+
+ASSÉDIO
+A ℓiⱴε não aceita a propagação de uma cultura de assédio. Leia a Cartilha de Assédio Moral e Sexual.
+DENUNCIE: qualquer situação ou comportamento que te incomode ou ofenda, de forma anônima ou não, pelo Canal de Denúncias.`
+    }
+  ];
+
+  // ─────────────────────────────────────────────
+  // AUTENTICAÇÃO VIA HASH SHA-256
+  // Hashes das senhas padrão — nunca as senhas em texto puro.
+  // admin = diretoria2026 | user = lia2026
+  // Para alterar, use o painel admin (armazena novo hash no localStorage).
+  // ─────────────────────────────────────────────
+  var DEFAULT_ADMIN_HASH = '5fed8fa8c4a6813740e5cf8bc55c80e19028a44975f28acad227403d248e564c';
+  var DEFAULT_USER_HASH  = '4bedf7799b20a6d3042789ffc2e5dc4c78f52a406c188cd0d8ab18cbc973b498';
+
+  var KEY = 'lia_chatbot_v2';
+  var history = [];
+  var isAdmin = false;
+  var activePolicy = null;
+
+  async function sha256(str) {
+    var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+  }
+
+  function getState() {
+    try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e) { return {}; }
+  }
+  function setState(patch) {
+    var s = Object.assign({}, getState(), patch);
+    localStorage.setItem(KEY, JSON.stringify(s));
+  }
+  function getAdminHash() { return getState().adminHash || DEFAULT_ADMIN_HASH; }
+  function getUserHash()  { return getState().userHash  || DEFAULT_USER_HASH; }
+
+  // ── PDF.JS ──
+  if (window.pdfjsLib) { pdfjsLib.GlobalWorkerOptions.workerSrc = ''; }
+
+  function setupPdfUpload(i) {
+    var input    = document.getElementById('pdf-input-' + i);
+    var area     = document.getElementById('upload-area-' + i);
+    var info     = document.getElementById('pdf-info-' + i);
+    var nameEl   = document.getElementById('pdf-name-' + i);
+    var removeBtn= document.getElementById('pdf-remove-' + i);
+    var parsing  = document.getElementById('pdf-parsing-' + i);
+    var textarea = document.getElementById('content-' + i);
+
+    function handleFile(file) {
+      if (!file || file.type !== 'application/pdf') return;
+      nameEl.textContent = file.name;
+      info.classList.add('visible');
+      parsing.classList.add('visible');
+      textarea.value = '';
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var typedarray = new Uint8Array(e.target.result);
+        pdfjsLib.getDocument({ data: typedarray }).promise.then(function(pdf) {
+          var texts = new Array(pdf.numPages);
+          var done = 0;
+          for (var p = 1; p <= pdf.numPages; p++) {
+            (function(pageNum) {
+              pdf.getPage(pageNum).then(function(page) {
+                page.getTextContent().then(function(tc) {
+                  texts[pageNum - 1] = tc.items.map(function(it){ return it.str; }).join(' ');
+                  done++;
+                  if (done === pdf.numPages) {
+                    textarea.value = texts.join('\n\n');
+                    parsing.classList.remove('visible');
+                  }
+                });
+              });
+            })(p);
+          }
+        }).catch(function() {
+          parsing.classList.remove('visible');
+          textarea.value = '';
+          alert('Não foi possível ler o PDF. Tente colar o texto manualmente.');
+        });
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    input.addEventListener('change', function() { if (this.files[0]) handleFile(this.files[0]); });
+    area.addEventListener('dragover', function(e) { e.preventDefault(); area.classList.add('drag'); });
+    area.addEventListener('dragleave', function() { area.classList.remove('drag'); });
+    area.addEventListener('drop', function(e) {
+      e.preventDefault(); area.classList.remove('drag');
+      if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+    });
+    removeBtn.addEventListener('click', function() {
+      info.classList.remove('visible');
+      input.value = '';
+      textarea.value = '';
+      nameEl.textContent = '';
+    });
+  }
+  setupPdfUpload('1');
+  setupPdfUpload('2');
+
+  // ── SCREEN SWITCHER ──
+  function show(id) {
+    ['login-screen','chat-screen','admin-panel'].forEach(function(s) {
+      document.getElementById(s).classList.remove('active');
+    });
+    document.getElementById(id).classList.add('active');
+  }
+
+  // ── LOGIN ──
+  document.getElementById('login-btn').addEventListener('click', tryLogin);
+  document.getElementById('password-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') tryLogin();
+  });
+
+  async function tryLogin() {
+    var val  = document.getElementById('password-input').value;
+    var hash = await sha256(val);
+    if (hash === getAdminHash()) {
+      isAdmin = true;
+    } else if (hash === getUserHash()) {
+      isAdmin = false;
+    } else {
+      document.getElementById('login-error').style.display = 'block';
+      document.getElementById('password-input').value = '';
+      return;
+    }
+    document.getElementById('password-input').value = '';
+    document.getElementById('login-error').style.display = 'none';
+    show('chat-screen');
+    applyRole();
+    initChat();
+  }
+
+  function applyRole() {
+    document.getElementById('btn-admin').style.display = isAdmin ? 'inline-flex' : 'none';
+  }
+
+  document.getElementById('btn-logout').addEventListener('click', function() {
+    isAdmin = false; activePolicy = null; history = [];
+    show('login-screen');
+  });
+
+  // ── ADMIN ──
+  document.getElementById('btn-admin').addEventListener('click', function() {
+    show('admin-panel'); loadAdmin();
+  });
+  document.getElementById('btn-back').addEventListener('click', function() {
+    show('chat-screen'); initChat();
+  });
+
+  document.querySelectorAll('.btn-save[data-policy]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var i = btn.getAttribute('data-policy');
+      var name    = document.getElementById('name-' + i).value.trim();
+      var content = document.getElementById('content-' + i).value.trim();
+      var patch = {}; patch['policy' + i] = { name: name, content: content };
+      setState(patch);
+      setStatus(i, !!(name && content));
+      flash('saved-' + i);
+    });
+  });
+
+  document.getElementById('btn-change-pass').addEventListener('click', async function() {
+    var val = document.getElementById('new-pass').value.trim();
+    if (!val) return;
+    setState({ adminHash: await sha256(val) });
+    document.getElementById('new-pass').value = '';
+    flash('saved-pass');
+  });
+
+  document.getElementById('btn-change-user-pass').addEventListener('click', async function() {
+    var val = document.getElementById('new-user-pass').value.trim();
+    if (!val) return;
+    setState({ userHash: await sha256(val) });
+    document.getElementById('new-user-pass').value = '';
+    flash('saved-user-pass');
+  });
+
+  function setStatus(i, filled) {
+    var el = document.getElementById('status-' + i);
+    el.textContent = filled ? 'Preenchida' : 'Vazia';
+    el.className = 'policy-status ' + (filled ? 'filled' : 'empty');
+  }
+
+  function flash(id) {
+    var el = document.getElementById(id);
+    el.style.display = 'inline';
+    setTimeout(function() { el.style.display = 'none'; }, 2500);
+  }
+
+  function loadAdmin() {
+    var s = getState();
+    for (var i = 1; i <= 2; i++) {
+      var p = s['policy' + i] || {};
+      document.getElementById('name-' + i).value    = p.name    || '';
+      document.getElementById('content-' + i).value = p.content || '';
+      setStatus(i, !!(p.name && p.content));
+    }
+  }
+
+  // ── REÚNE TODAS AS POLÍTICAS DISPONÍVEIS ──
+  function getAllPolicies() {
+    var s = getState();
+    var all = BUILT_IN_POLICIES.slice(); // começa com as embutidas
+    for (var i = 1; i <= 2; i++) {
+      var p = s['policy' + i] || {};
+      if (p.name && p.content) all.push({ id: 'extra-' + i, name: p.name, content: p.content });
+    }
+    return all;
+  }
+
+  // ── CHAT ──
+  document.getElementById('send-btn').addEventListener('click', sendMessage);
+  document.getElementById('chat-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+  document.getElementById('chat-input').addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+  });
+
+  function initChat() {
+    var policies = getAllPolicies();
+    activePolicy = null;
+    history = [];
+    document.getElementById('messages').innerHTML = '';
+    document.getElementById('active-policy-bar').classList.remove('visible');
+    addBot(policies.length
+      ? 'Oi, sou a ℓIA! Posso te ajudar com as políticas da ℓiⱴε. Clique em **📋 Políticas disponíveis** e escolha sobre qual você quer saber mais 😉'
+      : 'Oi! Sou a ℓIA. Ainda não há políticas configuradas.');
+  }
+
+  function esc(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function fmt(t) {
+    return '<p>' + t
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\n\n/g, '</p><p>')
+      .replace(/\n/g, '<br>') + '</p>';
+  }
+
+  var BOT_AVATAR = '<div class="msg-avatar"><svg viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg" width="28" height="28"><circle cx="14" cy="14" r="13" fill="#F4FF53" stroke="#1A1916" stroke-width="1.5"/><circle cx="10" cy="11" r="1.8" fill="#1A1916"/><circle cx="18" cy="11" r="1.8" fill="#1A1916"/><path d="M9 16.5 Q14 21 19 16.5" stroke="#1A1916" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg></div>';
+
+  function addBot(text) {
+    var msgs = document.getElementById('messages');
+    var d = document.createElement('div');
+    d.className = 'msg bot';
+    d.innerHTML = BOT_AVATAR + '<div class="msg-bubble">' + fmt(text) + '</div>';
+    msgs.appendChild(d);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function addUser(text) {
+    var msgs = document.getElementById('messages');
+    var d = document.createElement('div');
+    d.className = 'msg user';
+    d.innerHTML = '<div class="msg-avatar">U</div><div class="msg-bubble">' + esc(text) + '</div>';
+    msgs.appendChild(d);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function showTyping() {
+    var msgs = document.getElementById('messages');
+    var d = document.createElement('div');
+    d.className = 'msg bot'; d.id = 'typing';
+    d.innerHTML = BOT_AVATAR + '<div class="msg-bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>';
+    msgs.appendChild(d);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+  function removeTyping() { var el = document.getElementById('typing'); if (el) el.remove(); }
+
+  async function sendMessage() {
+    var input = document.getElementById('chat-input');
+    var text  = input.value.trim();
+    if (!text) return;
+    document.getElementById('suggestions').innerHTML = '';
+    input.value = ''; input.style.height = 'auto';
+    document.getElementById('send-btn').disabled = true;
+    addUser(text);
+    history.push({ role: 'user', content: text });
+    showTyping();
+
+    var ctx;
+    if (activePolicy) {
+      ctx = '## ' + activePolicy.name + '\n\n' + activePolicy.content;
+    } else {
+      ctx = getAllPolicies().map(function(p) {
+        return '## ' + p.name + '\n\n' + p.content;
+      }).join('\n\n---\n\n');
+    }
+
+    var sys = ctx
+      ? 'Você é a ℓIA (ℓiⱴε Intelligence Assistant), assistente virtual de políticas internas da ℓiⱴε. Responda perguntas com base EXCLUSIVAMENTE nas políticas abaixo. Não invente informações. Se a resposta não estiver nas políticas, diga claramente que não tem essa informação. Seja direta, clara e use o tom leve e confiante da ℓiⱴε. Quando relevante, mencione de qual política vem a informação.\n\n' + ctx
+      : 'Você é a ℓIA. Informe que não há políticas disponíveis no momento.';
+
+    try {
+      var res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ system: sys, messages: history })
+      });
+      var data = await res.json();
+      var reply = (data.content && data.content[0] && data.content[0].text) || 'Não consegui processar. Tente novamente.';
+      removeTyping();
+      history.push({ role: 'assistant', content: reply });
+      addBot(reply);
+    } catch(e) {
+      removeTyping();
+      addBot('Erro ao chamar a ℓIA. Tente novamente em instantes.');
+      history.pop();
+    }
+    document.getElementById('send-btn').disabled = false;
+    input.focus();
+  }
+
+  // ── POLICIES MODAL ──
+  document.getElementById('btn-policies').addEventListener('click', function() {
+    var policies = getAllPolicies();
+    var body = document.getElementById('modal-body');
+    body.innerHTML = '';
+    if (!policies.length) {
+      body.innerHTML = '<p class="modal-empty">Nenhuma política disponível.</p>';
+    } else {
+      policies.forEach(function(p) {
+        var item = document.createElement('div');
+        item.className = 'modal-policy-item';
+        item.innerHTML = '<span class="dot"></span><span>' + esc(p.name) + '</span><span class="arrow">→</span>';
+        item.addEventListener('click', function() {
+          activePolicy = p;
+          document.getElementById('active-policy-name').textContent = 'Perguntando sobre: ' + p.name;
+          document.getElementById('active-policy-bar').classList.add('visible');
+          document.getElementById('policies-modal').classList.remove('open');
+          history = [];
+          document.getElementById('messages').innerHTML = '';
+          addBot('Oi, sou a ℓIA! Agora estou focada em **' + p.name + '**. O que você gostaria de saber?');
+        });
+        body.appendChild(item);
+      });
+    }
+    document.getElementById('policies-modal').classList.add('open');
+  });
+
+  document.getElementById('modal-close').addEventListener('click', function() {
+    document.getElementById('policies-modal').classList.remove('open');
+  });
+  document.getElementById('policies-modal').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('open');
+  });
+
+  document.getElementById('clear-active-policy').addEventListener('click', function() {
+    activePolicy = null;
+    document.getElementById('active-policy-bar').classList.remove('visible');
+    history = [];
+    document.getElementById('messages').innerHTML = '';
+    addBot('Oi, sou a ℓIA! Posso te ajudar com as políticas da ℓiⱴε. Clique em **📋 Políticas disponíveis** e escolha sobre qual você quer saber mais 😉');
+  });
+
+})();
+</script>
+</body>
+</html>
